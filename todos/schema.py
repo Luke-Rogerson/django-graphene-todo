@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from django.utils import timezone
+from graphql import GraphQLError
 
 from .models import Todo
 
@@ -15,7 +16,7 @@ class Query(graphene.ObjectType):
     todos = graphene.List(TodoType)
 
     def resolve_todos(self, info):
-        return Todo.objects.all()
+        return Todo.objects.filter(deleted=False)
 
 
 class CreateTodo(graphene.Mutation):
@@ -37,10 +38,13 @@ class DeleteTodo(graphene.Mutation):
         id = graphene.ID(required=True)
 
     def mutate(self, info, id: str):
-        todo: Todo = Todo.objects.get(id=id)
-        todo.deleted = True
-        todo.save()
-        return DeleteTodo(todo=todo)
+        try:
+            todo: Todo = Todo.objects.get(id=id)
+            todo.deleted = True
+            todo.save()
+            return DeleteTodo(todo=todo)
+        except:
+            raise GraphQLError('Not found')
 
 
 class EditTodo(graphene.Mutation):
@@ -51,11 +55,14 @@ class EditTodo(graphene.Mutation):
         text = graphene.String(required=True)
 
     def mutate(self, info, id: str, text: str):
-        todo: Todo = Todo.objects.get(id=id)
-        todo.text = text
-        todo.date_updated = timezone.now()
-        todo.save()
-        return DeleteTodo(todo=todo)
+        try:
+            todo: Todo = Todo.objects.get(id=id)
+            todo.text = text
+            todo.date_updated = timezone.now()
+            todo.save()
+            return DeleteTodo(todo=todo)
+        except:
+            raise GraphQLError('Not found')
 
 
 class MarkTodoAsDone(graphene.Mutation):
@@ -66,11 +73,14 @@ class MarkTodoAsDone(graphene.Mutation):
         status = graphene.Boolean()
 
     def mutate(self, info, id: str, status=None):
-        todo: Todo = Todo.objects.get(id=id)
-        todo.completed = status if status is not None else not todo.completed
-        todo.date_updated = timezone.now()
-        todo.save()
-        return MarkTodoAsDone(todo=todo)
+        try:
+            todo: Todo = Todo.objects.get(id=id)
+            todo.completed = status if status is not None else not todo.completed
+            todo.date_updated = timezone.now()
+            todo.save()
+            return MarkTodoAsDone(todo=todo)
+        except:
+            raise GraphQLError('Not found')
 
 
 class Mutation(graphene.ObjectType):
