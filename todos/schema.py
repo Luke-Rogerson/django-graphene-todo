@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 from django.utils import timezone
 from graphql import GraphQLError
+from graphql_jwt.decorators import login_required
 
 from .models import Todo
 
@@ -15,6 +16,7 @@ class TodoType(DjangoObjectType):
 class Query(graphene.ObjectType):
     todos = graphene.List(TodoType)
 
+    @login_required
     def resolve_todos(self, info):
         return Todo.objects.filter(deleted=False)
 
@@ -25,8 +27,10 @@ class CreateTodo(graphene.Mutation):
     class Arguments:
         text = graphene.String(required=True)
 
-    def mutate(self, info, text: str):
-        todo = Todo(text=text)
+    @login_required
+    def mutate(self, info: graphene.ResolveInfo, text: str):
+        user = info.context.user
+        todo = Todo(text=text, created_by=user)
         todo.save()
         return CreateTodo(todo=todo)
 
@@ -37,6 +41,7 @@ class DeleteTodo(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
+    @login_required
     def mutate(self, info, id: str):
         try:
             todo: Todo = Todo.objects.get(id=id)
@@ -54,6 +59,7 @@ class EditTodo(graphene.Mutation):
         id = graphene.ID(required=True)
         text = graphene.String(required=True)
 
+    @login_required
     def mutate(self, info, id: str, text: str):
         try:
             todo: Todo = Todo.objects.get(id=id)
@@ -72,6 +78,7 @@ class MarkTodoAsDone(graphene.Mutation):
         id = graphene.ID(required=True)
         status = graphene.Boolean()
 
+    @login_required
     def mutate(self, info, id: str, status=None):
         try:
             todo: Todo = Todo.objects.get(id=id)
