@@ -1,8 +1,11 @@
+
 import graphene
 from graphene_django import DjangoObjectType
 from django.utils import timezone
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
+from typing import List, Optional
+from django.core.paginator import Paginator
 
 from .models import Todo
 
@@ -14,11 +17,16 @@ class TodoType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
-    todos = graphene.List(TodoType)
+    todos = graphene.List(TodoType, page=graphene.Int(),  count=graphene.Int())
 
-    @login_required
-    def resolve_todos(self, info):
-        return Todo.objects.filter(deleted=False)
+    def resolve_todos(self, info, page: Optional[int] = None, count: int = 5) -> List[TodoType]:
+        todos = Todo.objects.filter(deleted=False)
+        p = Paginator(todos, count)
+
+        if (page):
+            return p.page(page).object_list
+
+        return todos
 
 
 class CreateTodo(graphene.Mutation):
