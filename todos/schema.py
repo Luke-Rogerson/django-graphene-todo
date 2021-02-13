@@ -17,9 +17,14 @@ class TodoType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
-    todos = graphene.List(TodoType, page=graphene.Int(),  count=graphene.Int())
+    todos = graphene.List(TodoType, page=graphene.Int(),
+                          count=graphene.Int(), search=graphene.String())
 
-    def resolve_todos(self, info, page: Optional[int] = None, count: int = 5) -> List[TodoType]:
+    def resolve_todos(self, info, page: Optional[int] = None, count: int = 5, search: Optional[str] = None) -> List[TodoType]:
+
+        if (search):
+            return Todo.objects.filter(deleted=False, text__icontains=search)
+
         todos = Todo.objects.filter(deleted=False)
         p = Paginator(todos, count)
 
